@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Value IQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --ink: #111827;
+    --muted: #6b7280;
+    --faint: #9ca3af;
+    --line: #e5e7eb;
+    --navy: #13294b;
+    --navy-2: #1d3a66;
+    --accent: #c8102e;
+    --over: #c8102e;
+    --over-bg: #fdecef;
+    --under: #13804b;
+    --under-bg: #e6f4ec;
+    --fair: #6b7280;
+    --fair-bg: #f1f2f4;
+    --dot: #8b95a7;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.45 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  button, input, select { font: inherit; color: inherit; }
+
+  /* ---------- top bar ---------- */
+  .top {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 800; letter-spacing: .08em; font-size: 15px; }
+  .brand span { color: var(--accent); }
+  .chip {
+    display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px;
+    border: 1px solid var(--line); border-radius: 999px; font-weight: 600; font-size: 13px;
+  }
+  .chip small { color: var(--muted); font-weight: 500; }
+  .search { position: relative; margin-left: auto; width: 260px; max-width: 100%; }
+  .search input {
+    width: 100%; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  }
+  .search input:focus { outline: 2px solid var(--navy-2); outline-offset: -1px; background: var(--card); }
+  .results {
+    position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(17, 24, 39, .12); overflow: hidden; display: none;
+  }
+  .results.open { display: block; }
+  .results button {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px;
+    border: 0; background: none; text-align: left; cursor: pointer;
+  }
+  .results button:hover, .results button.active { background: var(--bg); }
+  .results small { color: var(--muted); margin-left: auto; }
+  .meta { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+
+  /* ---------- layout ---------- */
+  .grid {
+    display: grid; grid-template-columns: 220px minmax(0, 1fr) 360px; gap: 16px;
+    padding: 16px 20px; max-width: 1480px; margin: 0 auto;
+  }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+  }
+  .eyebrow span { text-transform: none; letter-spacing: 0; }
+
+  /* ---------- season sidebar ---------- */
+  .season {
+    background: var(--navy); color: #fff; border-radius: 10px; padding: 20px;
+    display: flex; flex-direction: column; gap: 18px; min-height: 100%;
+  }
+  .season .eyebrow { color: #9fb3d1; }
+  .season .goals { font-size: 64px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+  .season .assists { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  .season dl { margin: 0; display: grid; gap: 12px; }
+  .season dt { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #9fb3d1; }
+  .season dd { margin: 2px 0 0; font-weight: 600; font-size: 15px; }
+  .season .market { margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.15); }
+  .season .market dd { font-size: 24px; font-weight: 800; }
+
+  /* ---------- center ---------- */
+  .center { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .big { font-size: 56px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; color: var(--navy); }
+  .vs { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; font-weight: 600; margin-top: 4px; }
+  .badge { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .badge.over { color: var(--over); background: var(--over-bg); }
+  .badge.under { color: var(--under); background: var(--under-bg); }
+  .badge.fair { color: var(--fair); background: var(--fair-bg); }
+  .meter { position: relative; height: 8px; background: var(--line); border-radius: 4px; margin-top: 14px; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; background: var(--navy); border-radius: 4px; transition: width .3s; }
+  .meter .tick { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--accent); transition: left .3s; }
+  .meter-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
+
+  .feats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+  .feat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .feat .name { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .feat .stat { font-size: 20px; font-weight: 800; margin-top: 2px; }
+  .feat .sub { font-size: 11px; color: var(--faint); min-height: 16px; }
+  .feat .amt { font-family: var(--mono); font-size: 12px; margin-top: 6px; }
+  .feat .amt.pos { color: var(--under); }
+  .feat .amt.neg { color: var(--over); }
+  .diverge { position: relative; height: 4px; background: var(--bg); border-radius: 2px; margin-top: 6px; }
+  .diverge::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--faint); }
+  .diverge i { position: absolute; top: 0; bottom: 0; border-radius: 2px; transition: all .3s; }
+
+  .chart-wrap { position: relative; margin-top: 8px; }
+  #scatter { display: block; width: 100%; height: 320px; }
+  #scatter .axis text { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
+  #scatter .gridline { stroke: var(--line); }
+  #scatter .pt { fill: var(--dot); opacity: .5; cursor: pointer; transition: opacity .15s; }
+  #scatter .pt:hover { opacity: 1; fill: var(--navy-2); }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--ink); color: #fff; font-size: 12px;
+    padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px));
+    display: none;
+  }
+  .tooltip b { display: block; }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 10px; }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .tile .val { font-size: 22px; font-weight: 800; }
+  .tile .lbl { font-size: 11px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+  .tile.insight { font-size: 13px; color: #374151; display: flex; align-items: center; }
+
+  /* ---------- right side ---------- */
+  .side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .side .card { padding: 16px; }
+  .tabs { display: flex; gap: 4px; margin: 10px 0 6px; background: var(--bg); padding: 3px; border-radius: 8px; }
+  .tabs button {
+    flex: 1; border: 0; background: none; padding: 5px 6px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; text-align: right; padding: 6px 4px; }
+  th:first-child { text-align: left; }
+  th:nth-child(2), th:nth-child(3) { width: 66px; }
+  th:nth-child(4) { width: 52px; }
+  td { padding: 6px 4px; border-top: 1px solid var(--line); text-align: right; font-size: 13px; white-space: nowrap; }
+  td:first-child { text-align: left; overflow: hidden; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--bg); }
+  tbody tr.sel { background: #eef2f8; }
+  .pname { display: flex; align-items: center; gap: 8px; font-weight: 600; overflow: hidden; }
+  .pname span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .gap.pos { color: var(--under); font-weight: 700; }
+  .gap.neg { color: var(--over); font-weight: 700; }
+  .crest {
+    flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center;
+    font-size: 7.5px; font-weight: 800; letter-spacing: .02em;
+  }
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stats3 div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .stats3 b { display: block; font-size: 17px; }
+  .stats3 small { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+  .whatif .inputs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+  .whatif label { font-size: 10px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; display: grid; gap: 3px; }
+  .whatif input, .whatif select {
+    width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); font-size: 13px;
+  }
+  .whatif .result { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 12px; }
+  .whatif .result b { font-size: 26px; color: var(--navy); }
+  .whatif .delta { font-family: var(--mono); font-size: 12px; }
+  .linkbtn { border: 0; background: none; color: var(--navy-2); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
+  .linkbtn:hover { text-decoration: underline; }
+
+  footer { max-width: 1480px; margin: 0 auto; padding: 0 20px 20px; color: var(--faint); font-size: 12px; }
+  footer a { color: inherit; }
+
+  @media (max-width: 1180px) {
+    .grid { grid-template-columns: 200px minmax(0, 1fr); }
+    .side { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  }
+  @media (max-width: 760px) {
+    .top { padding: 10px 16px; }
+    .search { width: 100%; margin-left: 0; }
+    .meta { display: none; }
+    .grid { grid-template-columns: 1fr; padding: 12px 16px; }
+    .season dl { grid-template-columns: repeat(2, 1fr); }
+    .side { display: flex; }
+    .center { padding: 16px; }
+    .big { font-size: 42px; }
+    .feats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .tile.insight { grid-column: 1 / -1; }
+    .whatif .inputs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    footer { padding: 0 16px 16px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">VALUE <span>IQ</span></div>
+  <div class="chip" id="chip"></div>
+  <div class="search">
+    <input id="search" type="search" placeholder="Search a player…" autocomplete="off" aria-label="Search a player">
+    <div class="results" id="results"></div>
+  </div>
+  <div class="meta" id="meta"></div>
+</header>
+
+<main class="grid">
+  <aside class="season" id="season"></aside>
+
+  <section class="card center">
+    <div>
+      <div class="eyebrow">Predicted transfer value</div>
+      <div class="big" id="pred"></div>
+      <div class="vs" id="vs"></div>
+      <div class="meter"><div class="fill" id="meterFill"></div><div class="tick" id="meterTick"></div></div>
+      <div class="meter-labels"><span>€0</span><span>▮ model · <span style="color:var(--accent)">|</span> market</span></div>
+    </div>
+
+    <div>
+      <div class="eyebrow">Feature contribution <span id="baselineNote"></span></div>
+      <div class="feats" id="feats"></div>
+    </div>
+
+    <div>
+      <div class="eyebrow">Predicted vs actual <span id="scatterNote"></span></div>
+      <div class="chart-wrap">
+        <svg id="scatter" role="img" aria-label="Scatter plot of predicted versus actual market value"></svg>
+        <div class="tooltip" id="tooltip"></div>
+      </div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="val" id="gapVal"></div><div class="lbl" id="gapLbl"></div></div>
+      <div class="tile"><div class="val" id="rankVal"></div><div class="lbl" id="rankLbl"></div></div>
+      <div class="tile insight" id="insight"></div>
+    </div>
+  </section>
+
+  <section class="side">
+    <div class="card">
+      <div class="eyebrow">Predicted vs market <span id="listNote"></span></div>
+      <div class="tabs" role="tablist" id="tabs">
+        <button role="tab" data-sort="value" aria-selected="true">Most valuable</button>
+        <button role="tab" data-sort="under" aria-selected="false">Underpriced</button>
+        <button role="tab" data-sort="over" aria-selected="false">Overpriced</button>
+      </div>
+      <table>
+        <thead><tr><th>Player</th><th>Model</th><th>Market</th><th>Gap</th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+      <div class="stats3" id="stats"></div>
+    </div>
+
+    <div class="card whatif">
+      <div class="eyebrow">Try your own numbers <button class="linkbtn" id="resetWhatif"></button></div>
+      <div class="inputs">
+        <label>Goals <input type="number" id="wGoals" min="0" max="60"></label>
+        <label>Assists <input type="number" id="wAssists" min="0" max="40"></label>
+        <label>Minutes <input type="number" id="wMinutes" min="0" max="3420" step="90"></label>
+        <label>Age <input type="number" id="wAge" min="15" max="42"></label>
+        <label>Pos <select id="wPos"><option>GK</option><option>DEF</option><option>MID</option><option>FWD</option></select></label>
+      </div>
+      <div class="result"><span>Model says <b id="wValue"></b></span><span class="delta" id="wDelta"></span></div>
+    </div>
+  </section>
+</main>
+
+<footer id="footer"></footer>
+
+<script>
+const D = /*__DATA__*/null;
+
+const CLUBS = {
+  "Arsenal": ["ARS", "#EF0107", "#fff"], "Aston Villa": ["AVL", "#670E36", "#95BFE5"],
+  "Bournemouth": ["BOU", "#DA291C", "#000"], "Brentford": ["BRE", "#E30613", "#fff"],
+  "Brighton & Hove Albion": ["BHA", "#0057B8", "#fff"], "Burnley": ["BUR", "#6C1D45", "#99D6EA"],
+  "Chelsea": ["CHE", "#034694", "#fff"], "Crystal Palace": ["CRY", "#1B458F", "#C4122E"],
+  "Everton": ["EVE", "#003399", "#fff"], "Fulham": ["FUL", "#000000", "#fff"],
+  "Leeds United": ["LEE", "#FFCD00", "#1D428A"], "Liverpool": ["LIV", "#C8102E", "#fff"],
+  "Manchester City": ["MCI", "#6CABDD", "#1C2C5B"], "Manchester United": ["MUN", "#DA291C", "#FBE122"],
+  "Newcastle United": ["NEW", "#241F20", "#fff"], "Nottingham Forest": ["NFO", "#DD0000", "#fff"],
+  "Sunderland": ["SUN", "#EB172B", "#fff"], "Tottenham Hotspur": ["TOT", "#132257", "#fff"],
+  "West Ham United": ["WHU", "#7A263A", "#1BB1E7"], "Wolverhampton Wanderers": ["WOL", "#FDB913", "#231F20"],
+  "Leicester City": ["LEI", "#003090", "#FDBE11"], "Southampton": ["SOU", "#D71920", "#fff"],
+  "Ipswich Town": ["IPS", "#3A64A3", "#fff"], "Luton Town": ["LUT", "#F78F1E", "#002D62"],
+  "Sheffield United": ["SHU", "#EE2737", "#fff"], "Watford": ["WAT", "#FBEE23", "#ED2127"],
+  "Norwich City": ["NOR", "#00A650", "#FFF200"], "West Bromwich Albion": ["WBA", "#122F67", "#fff"],
+};
+const ROLES = {
+  GK: "Goalkeeper", CB: "Centre-back", LB: "Left-back", RB: "Right-back", DM: "Defensive mid",
+  CM: "Central mid", AM: "Attacking mid", LM: "Left mid", RM: "Right mid", LW: "Left wing",
+  RW: "Right wing", SS: "Second striker", CF: "Centre-forward", DEF: "Defender", MID: "Midfielder", FWD: "Forward",
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const plain = s => s.replace(/[Øø]/g, "o").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const num = n => n.toLocaleString("en-GB");
+const eur = v => `${v < 0 ? "−" : ""}€${(Math.abs(v) / 1e6).toFixed(1)}M`;
+const signed = v => (v >= 0 ? "+" : "") + eur(v);
+const pct = v => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v * 100))}%`;
+const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+
+function crest(club, size = 22) {
+  const [code, bg, fg] = CLUBS[club] || [club.slice(0, 3).toUpperCase(), "#d1d5db", "#111827"];
+  return `<span class="crest" style="background:${bg};color:${fg};width:${size}px;height:${size}px" title="${esc(club)}">${code}</span>`;
+}
+
+// Same maths as features.py + model_utils.predict, so the page and Python agree.
+function predictValue({ goals, assists, minutes, age, position }) {
+  const f = {
+    goals, assists, minutes,
+    goals_per90: goals / Math.max(minutes, 1) * 90,
+    years_before_peak: Math.max(D.peakAge - age, 0),
+    years_after_peak: Math.max(age - D.peakAge, 0),
+    pos_DEF: +(position === "DEF"), pos_MID: +(position === "MID"), pos_FWD: +(position === "FWD"),
+    season: D.seasonYear,
+  };
+  let y = D.intercept;
+  for (const [k, c] of Object.entries(D.coefficients)) y += c * f[k];
+  return Math.max(y, D.minPrediction);
+}
+
+function verdict(p) {
+  const gap = p.predicted / p.market - 1;
+  if (gap > D.fairBand) return { cls: "under", text: "model says underpriced" };
+  if (gap < -D.fairBand) return { cls: "over", text: "model says overpriced" };
+  return { cls: "fair", text: "model says fairly priced" };
+}
+
+// ---------- derived data ----------
+const P = D.players;
+P.forEach(p => { p.gap = p.predicted - p.market; p.gapPct = p.predicted / p.market - 1; });
+const byPredicted = [...P].sort((a, b) => b.predicted - a.predicted);
+const byMarket = [...P].sort((a, b) => b.market - a.market);
+const maxContrib = Math.max(...P.flatMap(p => Object.values(p.contrib).map(Math.abs)));
+let current = null;
+let sortMode = "value";
+
+// ---------- static bits ----------
+$("meta").textContent = `Linear regression · ${D.metrics.n_test} players · R² ${D.metrics.r2.toFixed(2)}`;
+$("baselineNote").textContent = `vs an average ${D.season} player (${eur(D.baseline)})`;
+$("scatterNote").textContent = `${P.length} players · ${D.season}`;
+$("listNote").textContent = D.season;
+$("stats").innerHTML = `
+  <div><b>${D.metrics.r2.toFixed(2)}</b><small>R²</small></div>
+  <div><b>${eur(D.metrics.mae)}</b><small>Mean error</small></div>
+  <div><b>${P.length}</b><small>Players</small></div>`;
+$("footer").innerHTML = `Trained on ${num(D.metrics.n_train)} Premier League player-seasons (${D.trainSeasons[0]} to ${D.trainSeasons.at(-1)}),
+  tested on the held-out ${D.season} season. Players with 900+ league minutes. Market values from Transfermarkt via
+  <a href="https://github.com/dcaribou/transfermarkt-datasets" target="_blank" rel="noopener">transfermarkt-datasets</a>,
+  as of June 2026 (the dataset's last update).${D.analytics ? " Visits are counted with GoatCounter: no cookies, no personal data." : ""}`;
+
+// GoatCounter events (only when analytics is on): which players people open, and
+// whether they try the what-if calculator. No cookies, no personal data.
+function track(name) {
+  if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name, event: true });
+}
+
+// ---------- rendering ----------
+function select(p, { fromWhatif = false, silent = false } = {}) {
+  if (!silent) track(`player: ${p.name}`);
+  current = p;
+  history.replaceState(null, "", `#${p.id}`);
+  const v = verdict(p);
+
+  $("chip").innerHTML = `${crest(p.club, 26)} ${esc(p.name)} <small>${esc(p.club)} · ${p.role} · ${D.season}</small>`;
+  $("season").innerHTML = `
+    <div>
+      <div class="eyebrow">Season output</div>
+      <div class="goals" style="margin-top:10px">${p.goals}</div>
+      <div class="assists">goal${p.goals === 1 ? "" : "s"} & ${p.assists} assist${p.assists === 1 ? "" : "s"}</div>
+    </div>
+    <dl>
+      <div><dt>Minutes played</dt><dd>${num(p.minutes)}</dd></div>
+      <div><dt>Appearances</dt><dd>${p.apps}</dd></div>
+      <div><dt>Age</dt><dd>${p.age}</dd></div>
+      <div><dt>Position</dt><dd>${ROLES[p.role] || p.role}</dd></div>
+    </dl>
+    <dl class="market"><div><dt>Market value</dt><dd>${eur(p.market)}</dd></div></dl>`;
+
+  $("pred").textContent = eur(p.predicted);
+  $("vs").innerHTML = `<span>vs ${eur(p.market)} market</span>
+    <span class="badge ${v.cls}">${signed(p.gap)} · ${v.text}</span>`;
+  const top = Math.max(p.predicted, p.market) * 1.1;
+  $("meterFill").style.width = `${p.predicted / top * 100}%`;
+  $("meterTick").style.left = `calc(${p.market / top * 100}% - 1px)`;
+
+  const stats = {
+    Goals: [p.goals, `${(p.goals / p.minutes * 90).toFixed(2)} per 90`],
+    Assists: [p.assists, "chances converted"],
+    Minutes: [num(p.minutes), `${Math.round(p.minutes / 34.2)}% of the season`],
+    Age: [p.age, p.age === D.peakAge ? "at peak age" : `${Math.abs(p.age - D.peakAge)} yrs ${p.age < D.peakAge ? "before" : "after"} peak`],
+    Position: [p.role, ROLES[p.position]],
+  };
+  $("feats").innerHTML = Object.entries(p.contrib).map(([g, c]) => {
+    const w = Math.abs(c) / maxContrib * 50;
+    const bar = c >= 0 ? `left:50%;width:${w}%;background:var(--under)` : `left:${50 - w}%;width:${w}%;background:var(--over)`;
+    return `<div class="feat">
+      <div class="name">${g}</div>
+      <div class="stat">${stats[g][0]}</div>
+      <div class="sub">${stats[g][1]}</div>
+      <div class="amt ${c >= 0 ? "pos" : "neg"}">${signed(c)}</div>
+      <div class="diverge"><i style="${bar}"></i></div>
+    </div>`;
+  }).join("");
+
+  $("gapVal").textContent = signed(p.gap);
+  $("gapVal").style.color = `var(--${v.cls === "fair" ? "ink" : v.cls})`;
+  $("gapLbl").textContent = `Residual · ${pct(p.gapPct)} vs market`;
+  const rankModel = byPredicted.indexOf(p) + 1, rankMarket = byMarket.indexOf(p) + 1;
+  $("rankVal").textContent = ordinal(Math.round((1 - (rankModel - 1) / P.length) * 100));
+  $("rankLbl").textContent = `Model percentile · #${rankModel} vs #${rankMarket} by market`;
+  $("insight").textContent = insight(p);
+
+  drawScatter();
+  renderList();
+  if (!fromWhatif) loadWhatif(p);
+}
+
+function insight(p) {
+  const entries = Object.entries(p.contrib).sort((a, b) => b[1] - a[1]);
+  const ups = entries.filter(([, c]) => c > 0).slice(0, 2).map(([g, c]) => `${g.toLowerCase()} (${signed(c)})`);
+  const down = entries.at(-1);
+  const first = p.name.split(" ").at(-1);
+  let s = ups.length
+    ? `Biggest boost: ${ups.join(" and ")}.`
+    : `Nothing in ${first}'s season lifts him above an average player.`;
+  if (down[1] < 0) s += ` Biggest drag: ${down[0].toLowerCase()} (${signed(down[1])}).`;
+  if (verdict(p).cls === "over") s += ` The market is paying for something these five numbers don't see (club, potential, defending, reputation).`;
+  if (verdict(p).cls === "under") s += ` On output alone, ${first} looks like a bargain.`;
+  return s;
+}
+
+function renderList() {
+  const sorted = {
+    value: byMarket,
+    under: [...P].sort((a, b) => b.gap - a.gap),
+    over: [...P].sort((a, b) => a.gap - b.gap),
+  }[sortMode].slice(0, 12);
+  $("list").innerHTML = sorted.map(p => `
+    <tr data-id="${p.id}" class="${p === current ? "sel" : ""}">
+      <td><div class="pname">${crest(p.club)}<span title="${esc(p.name)}">${esc(p.name)}</span></div></td>
+      <td>${eur(p.predicted)}</td>
+      <td>${eur(p.market)}</td>
+      <td class="gap ${p.gap >= 0 ? "pos" : "neg"}">${pct(p.gapPct)}</td>
+    </tr>`).join("");
+}
+
+$("list").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-id]");
+  if (tr) select(P.find(p => p.id === +tr.dataset.id));
+});
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-sort]");
+  if (!b) return;
+  sortMode = b.dataset.sort;
+  $("tabs").querySelectorAll("button").forEach(x => x.setAttribute("aria-selected", x === b));
+  renderList();
+});
+
+// ---------- scatter ----------
+const NS = "http://www.w3.org/2000/svg";
+function drawScatter() {
+  const svg = $("scatter");
+  const W = svg.clientWidth || 600, H = svg.clientHeight || 320;
+  const m = { l: 52, r: 12, t: 10, b: 34 };
+  const step = 25e6;
+  const max = Math.ceil(Math.max(...P.map(p => Math.max(p.market, p.predicted))) / step) * step;
+  const x = v => m.l + v / max * (W - m.l - m.r);
+  const y = v => H - m.b - v / max * (H - m.t - m.b);
+  const tickStep = max > 150e6 ? 50e6 : step;
+
+  let g = `<g class="axis">`;
+  for (let v = 0; v <= max; v += tickStep) {
+    g += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+    g += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">€${v / 1e6}M</text>`;
+    g += `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="${v + tickStep > max ? "end" : "middle"}">€${v / 1e6}M</text>`;
+  }
+  g += `<text x="${(m.l + W - m.r) / 2}" y="${H - 2}" text-anchor="middle">Actual market value</text>`;
+  g += `<text transform="translate(12 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">Predicted</text></g>`;
+  g += `<line x1="${x(0)}" y1="${y(0)}" x2="${x(max)}" y2="${y(max)}" stroke="var(--accent)" stroke-width="1.5"/>`;
+  g += P.filter(p => p !== current)
+    .map(p => `<circle class="pt" data-id="${p.id}" cx="${x(p.market)}" cy="${y(p.predicted)}" r="4"/>`).join("");
+  if (current) {
+    const cx = x(current.market), cy = y(current.predicted);
+    g += `<line x1="${cx}" x2="${cx}" y1="${y(current.market)}" y2="${cy}" stroke="var(--navy)" stroke-dasharray="3 3"/>`;
+    g += `<circle cx="${cx}" cy="${cy}" r="11" fill="var(--navy)" opacity=".15"/>`;
+    g += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="var(--navy)" stroke="#fff" stroke-width="2"/>`;
+    const anchor = cx > W * 0.7 ? "end" : "start", dx = anchor === "end" ? -14 : 14;
+    g += `<text x="${cx + dx}" y="${cy - 8}" text-anchor="${anchor}" font-size="12" font-weight="700" fill="var(--navy)">${esc(current.name)}</text>`;
+  }
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = g;
+}
+
+const tip = $("tooltip");
+$("scatter").addEventListener("mouseover", e => {
+  const id = e.target.dataset && e.target.dataset.id;
+  if (!id) return;
+  const p = P.find(q => q.id === +id);
+  tip.innerHTML = `<b>${esc(p.name)}</b>${esc(p.club)} · model ${eur(p.predicted)} · market ${eur(p.market)}`;
+  tip.style.left = `${e.target.cx.baseVal.value}px`;
+  tip.style.top = `${e.target.cy.baseVal.value}px`;
+  tip.style.display = "block";
+});
+$("scatter").addEventListener("mouseout", () => { tip.style.display = "none"; });
+$("scatter").addEventListener("click", e => {
+  const id = e.target.dataset && e.target.dataset.id;
+  if (id) { tip.style.display = "none"; select(P.find(p => p.id === +id)); }
+});
+new ResizeObserver(() => drawScatter()).observe($("scatter"));
+
+// ---------- search ----------
+let hits = [], active = 0;
+function showResults() {
+  const q = plain($("search").value.trim());
+  hits = q ? P.filter(p => plain(p.name).includes(q) || plain(p.club).includes(q)).slice(0, 8) : [];
+  active = 0;
+  $("results").innerHTML = hits.map((p, i) =>
+    `<button data-id="${p.id}" class="${i === active ? "active" : ""}">${crest(p.club)} ${esc(p.name)}<small>${eur(p.market)}</small></button>`
+  ).join("") || (q ? `<button disabled>No player with 900+ minutes matches</button>` : "");
+  $("results").classList.toggle("open", !!q);
+}
+function pick(p) {
+  $("search").value = "";
+  $("results").classList.remove("open");
+  select(p);
+}
+$("search").addEventListener("input", showResults);
+$("search").addEventListener("keydown", e => {
+  if (!hits.length) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    active = (active + (e.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length;
+    $("results").querySelectorAll("button").forEach((b, i) => b.classList.toggle("active", i === active));
+  } else if (e.key === "Enter") {
+    pick(hits[active]);
+  } else if (e.key === "Escape") {
+    $("results").classList.remove("open");
+  }
+});
+$("results").addEventListener("mousedown", e => {
+  const b = e.target.closest("button[data-id]");
+  if (b) { e.preventDefault(); pick(P.find(p => p.id === +b.dataset.id)); }
+});
+$("search").addEventListener("blur", () => $("results").classList.remove("open"));
+
+// ---------- what-if ----------
+const W_INPUTS = ["wGoals", "wAssists", "wMinutes", "wAge", "wPos"];
+function loadWhatif(p) {
+  $("wGoals").value = p.goals; $("wAssists").value = p.assists;
+  $("wMinutes").value = p.minutes; $("wAge").value = p.age; $("wPos").value = p.position;
+  $("resetWhatif").textContent = `Reset to ${p.name.split(" ").at(-1)}`;
+  updateWhatif();
+}
+function updateWhatif() {
+  const n = id => Math.max(0, +$(id).value || 0);
+  const value = predictValue({
+    goals: n("wGoals"), assists: n("wAssists"), minutes: n("wMinutes"),
+    age: n("wAge"), position: $("wPos").value,
+  });
+  $("wValue").textContent = eur(value);
+  const d = value - current.predicted;
+  $("wDelta").textContent = Math.abs(d) < 5e4 ? `same as ${current.name.split(" ").at(-1)}` : `${signed(d)} vs ${current.name.split(" ").at(-1)}`;
+  $("wDelta").style.color = Math.abs(d) < 5e4 ? "var(--muted)" : d > 0 ? "var(--under)" : "var(--over)";
+}
+let whatifTracked = false;
+W_INPUTS.forEach(id => $(id).addEventListener("input", () => {
+  if (!whatifTracked) { whatifTracked = true; track("what-if used"); }
+  updateWhatif();
+}));
+$("resetWhatif").addEventListener("click", () => loadWhatif(current));
+
+// ---------- start ----------
+const fromHash = P.find(p => p.id === +location.hash.slice(1));
+select(fromHash || byMarket[0], { silent: true });
+</script>
+<!--__ANALYTICS__-->
+</body>
+</html>
